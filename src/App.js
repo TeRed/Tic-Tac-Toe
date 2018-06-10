@@ -40,8 +40,8 @@ const movesFunctions = {
 class App extends Component {
   constructor(props) {
     super(props);
-    this.trueMoves = [];
-    this.falseMoves = [];
+    this.Xmoves = [];
+    this.Omoves = [];
 
     const gameState = [];
     for(let i = 0; i < 100; i++) {
@@ -73,23 +73,32 @@ class App extends Component {
   checkForWinner(moves) {
     for(let i = 0; i < moves.length; i++) {
       const el = moves[i];
-      let nextSteps = [undefined, undefined, undefined, undefined]
+      let nextSteps = [undefined, undefined, undefined, undefined];
+      let nextStepsFiltered;
 
-      if (nextSteps.map((val, i) => ({x: el.x - (i + 1), y: el.y - (i + 1)}))
-                    .filter(val => this.arrayHas(moves, val))
-                    .length === 4) return true;
+      nextStepsFiltered = nextSteps.map((val, i) => ({x: el.x - (i + 1), y: el.y - (i + 1)}))
+                                    .filter(val => this.arrayHas(moves, val));
+      if(nextStepsFiltered.length === 4) {
+        return {start: el, finish: nextStepsFiltered[3]};
+      }
 
-      if (nextSteps.map((val, i) => ({x: el.x, y: el.y - (i + 1)}))
-                    .filter(val => this.arrayHas(moves, val))
-                    .length === 4) return true;
+      nextStepsFiltered = nextSteps.map((val, i) => ({x: el.x, y: el.y - (i + 1)}))
+                                    .filter(val => this.arrayHas(moves, val));
+      if(nextStepsFiltered.length === 4) {
+        return {start: el, finish: nextStepsFiltered[3]};
+      }
 
-      if (nextSteps.map((val, i) => ({x: el.x + i + 1, y: el.y - (i + 1)}))
-                    .filter(val => this.arrayHas(moves, val))
-                    .length === 4) return true;
+      nextStepsFiltered = nextSteps.map((val, i) => ({x: el.x + i + 1, y: el.y - (i + 1)}))
+                                    .filter(val => this.arrayHas(moves, val));
+      if(nextStepsFiltered.length === 4) {
+        return {start: el, finish: nextStepsFiltered[3]};
+      }
 
-      if (nextSteps.map((val, i) => ({x: el.x - (i + 1), y: el.y}))
-                    .filter(val => this.arrayHas(moves, val))
-                    .length === 4) return true;
+      nextStepsFiltered = nextSteps.map((val, i) => ({x: el.x - (i + 1), y: el.y}))
+                                    .filter(val => this.arrayHas(moves, val));
+      if(nextStepsFiltered.length === 4) {
+        return {start: el, finish: nextStepsFiltered[3]};
+      }
     }
     return false;
   }
@@ -140,8 +149,6 @@ class App extends Component {
   decisionMove(moves, counterMoves) {
     let fields = this.getFields(moves, counterMoves); // tutaj dostajemy pola
 
-    console.log(fields);
-
     let checkMoves = []; // tutaj mamy jakieś ruchy
     checkMoves = fields.map(move => {
       return {x: move.x, y: move.y, price: this.MINMAX(move, moves, counterMoves, 2)};
@@ -171,20 +178,31 @@ class App extends Component {
     let gameState = this.state.gameState;
 
     let possibleMove = {x, y};
-    if(!this.arrayHas(this.falseMoves, possibleMove) &&
-        !this.arrayHas(this.trueMoves, possibleMove)) {
-      this.trueMoves.push(possibleMove);
+    if(!this.arrayHas(this.Omoves, possibleMove) &&
+        !this.arrayHas(this.Xmoves, possibleMove)) {
+      this.Xmoves.push(possibleMove);
       gameState[x][y] = this.state.currentPlayer;
     }
     else return;
 
-    let bestMove = this.decisionMove(this.falseMoves, this.trueMoves);
+    let bestMove = this.decisionMove(this.Omoves, this.Xmoves);
 
     gameState[bestMove.x][bestMove.y] = !this.state.currentPlayer;
-    this.falseMoves.push(bestMove);
+    this.Omoves.push(bestMove);
 
-    if(this.checkForWinner(this.trueMoves) ||
-    this.checkForWinner(this.falseMoves)) alert('Winner');
+    let XwinnerScore = this.checkForWinner(this.Xmoves);
+    let OwinnerScore = this.checkForWinner(this.Omoves);
+
+    if(XwinnerScore) {
+      this.setState({
+        winnerScore: XwinnerScore
+      });
+    }
+    else if(OwinnerScore) {
+      this.setState({
+        winnerScore: OwinnerScore
+      });
+    }
 
     this.setState((prevState, props) => ({
         gameState: gameState
@@ -196,8 +214,10 @@ class App extends Component {
     return (
       <div className="App">
         <h1>Tic Tac Toe</h1>
-        <Canvas gameState={this.state.gameState}
+        <Canvas Xmoves={this.Xmoves}
+                Omoves={this.Omoves}
                 onGameStateChange={this.updateGameState}
+                winnerScore={this.state.winnerScore}
         />
       </div>
     );

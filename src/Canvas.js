@@ -32,33 +32,41 @@ componentDidUpdate() {
     const canvasElem = document.getElementById('canvas');
     const ctx = canvasElem.getContext('2d');
 
-    for(let i = 0; i < 100; i++) {
-        for(let j = 0; j < 100; j++) {
-            if(this.props.gameState[i][j] === true || this.props.gameState[i][j] === false) {
-                let x = (i * 31) + 1;
-                let y = (j * 31) + 1;
-                if(this.props.gameState[i][j]) {
-                    ctx.beginPath();
-                    ctx.moveTo(x + 2, y + 2);
-                    ctx.lineTo(x + 27, y + 27);
-                    ctx.moveTo(x + 27, y + 2);
-                    ctx.lineTo(x + 2, y + 27);
-                    ctx.lineWidth = 3;
-                    ctx.strokeStyle = '#003300';
-                    ctx.stroke();
-                }
-                else {
-                    ctx.beginPath();
-                    ctx.arc(x + 14.5, y + 14.5, 11, 0, 2 * Math.PI, false);
-                    ctx.fillStyle = 'green';
-                    ctx.fill();
-                    ctx.lineWidth = 3;
-                    ctx.strokeStyle = '#003300';
-                    ctx.stroke();
-                }
-            }
-        }
+    if(this.props.winnerScore) {
+        let start = this.props.winnerScore.start;
+        let finish = this.props.winnerScore.finish;
+        ctx.beginPath();
+        ctx.moveTo((start.x * 31) + 15, (start.y * 31) + 15);
+        ctx.lineTo((finish.x * 31) + 15, (finish.y * 31) + 15);
+        ctx.stroke();
+        ctx.lineWidth = 5;
+        ctx.strokeStyle = 'black';
     }
+
+    this.props.Xmoves.forEach(element => {
+        let x = (element.x * 31) + 1;
+        let y = (element.y * 31) + 1;
+        ctx.beginPath();
+        ctx.moveTo(x + 2, y + 2);
+        ctx.lineTo(x + 27, y + 27);
+        ctx.moveTo(x + 27, y + 2);
+        ctx.lineTo(x + 2, y + 27);
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = '#003300';
+        ctx.stroke();
+    });
+
+    this.props.Omoves.forEach(element => {
+        let x = (element.x * 31) + 1;
+        let y = (element.y * 31) + 1;
+        ctx.beginPath();
+        ctx.arc(x + 14.5, y + 14.5, 11, 0, 2 * Math.PI, false);
+        ctx.fillStyle = 'green';
+        // ctx.fill();
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = '#003300';
+        ctx.stroke();
+    });
 }
 handleClick(event) {
     let canvas = document.getElementById('canvas');
@@ -66,29 +74,19 @@ handleClick(event) {
     let x = event.clientX - rect.left;
     let y = event.clientY - rect.top;
 
-    // if(x % 31 === 0) {
-    //     console.log('Stop');
-    //     return;
-    // }
-    // if(y % 31 === 0) {
-    //     console.log('Stop');
-    //     return;
-    // }
     let xId = 0, yId = 0;
 
     let move = 0;
     while(true) {
-    console.log('XXXX');
-    if(x >= move && x <= (move + 31)) break;
-    xId++;
-    move += 31;
+        if(x >= move && x <= (move + 31)) break;
+        xId++;
+        move += 31;
     }
     move = 0;
     while(true) {
-    console.log('YYYY');
-    if(y >= move && y <= (move + 31)) break;
-    yId++;
-    move += 31;
+        if(y >= move && y <= (move + 31)) break;
+        yId++;
+        move += 31;
     }
     this.props.onGameStateChange(xId, yId);
 }

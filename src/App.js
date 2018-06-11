@@ -1,6 +1,6 @@
 import React, { Component } from 'react';
-import './App.css';
 import Canvas from './Canvas';
+import Menu from './Menu';
 
 const movesFunctions = {
   top: (obj, move) => ({
@@ -40,26 +40,32 @@ const movesFunctions = {
 class App extends Component {
   constructor(props) {
     super(props);
-    this.Xmoves = [];
-    this.Omoves = [];
 
-    const gameState = [];
-    for(let i = 0; i < 100; i++) {
-      const toPush = [];
-      for(let j = 0; j < 100; j++) toPush.push(0);
-      gameState.push(toPush)
-    }
     this.state = {
-      gameState: gameState,
-      currentPlayer: true
+      Xmoves: [],
+      Omoves: [],
+      winnerScore: undefined
     }
-    this.updateGameState = this.updateGameState.bind(this)
+    this.updateGameState = this.updateGameState.bind(this);
+    this.AiStarts = this.AiStarts.bind(this);
+    this.restart = this.restart.bind(this);
   }
 
   arrayHas(array, element) {
     if(array.filter(el => {return el.x === element.x && el.y === element.y}).length)
       return true;
     else return false;
+  }
+
+  addPrice(bestMoves, objectToCheck, price) {
+    let element = this.arrayGet(bestMoves, objectToCheck);
+    if(element) element.price += price;
+    else bestMoves.push({...objectToCheck, price});
+  }
+
+  withinBoundaries(objectToCheck) {
+    return objectToCheck.x >= 0 && objectToCheck.x < 100
+            && objectToCheck.y >= 0 && objectToCheck.y < 100;
   }
 
   arrayGet(array, element) {
@@ -73,7 +79,7 @@ class App extends Component {
   checkForWinner(moves) {
     for(let i = 0; i < moves.length; i++) {
       const el = moves[i];
-      let nextSteps = [undefined, undefined, undefined, undefined];
+      const nextSteps = [undefined, undefined, undefined, undefined];
       let nextStepsFiltered;
 
       nextStepsFiltered = nextSteps.map((val, i) => ({x: el.x - (i + 1), y: el.y - (i + 1)}))
@@ -103,19 +109,8 @@ class App extends Component {
     return false;
   }
 
-  addPrice(bestMoves, objectToCheck, price) {
-    let element = this.arrayGet(bestMoves, objectToCheck);
-    if(element) element.price += price;
-    else bestMoves.push({...objectToCheck, price});
-  }
-
-  withinBoundaries(objectToCheck) {
-    return objectToCheck.x >= 0 && objectToCheck.x < 100
-            && objectToCheck.y >= 0 && objectToCheck.y < 100;
-  }
-
   heuristic(moves, counterMoves) {
-    let bestMoves = [];
+    const bestMoves = [];
 
     moves.forEach((el) => {
       let counter = 1;
@@ -146,8 +141,24 @@ class App extends Component {
     return fields.filter(field => field.price === bestPrice);
   }
 
-  decisionMove(moves, counterMoves) {
+  MINMAX(move, moves, counterMoves, level) {
+    if (level === 0) return move.price;
+    let p = moves.concat([{x: move.x, y: move.y}]);
+    let fields = this.getFields(moves, counterMoves);
+
+    let bestOpponent = fields.reduce((prev, curr) => {
+      return prev.price > curr.price ? prev : curr;
+    });
+
+    if(level % 2 !== 0)
+      return -move.price + this.MINMAX(bestOpponent, p, counterMoves, level - 1);
+    else
+      return move.price + this.MINMAX(bestOpponent, p, counterMoves, level - 1);
+  }
+
+  aiMove(moves, counterMoves) {
     let fields = this.getFields(moves, counterMoves); // tutaj dostajemy pola
+    console.log(fields);
 
     let checkMoves = []; // tutaj mamy jakieś ruchy
     checkMoves = fields.map(move => {
@@ -159,39 +170,25 @@ class App extends Component {
     });
   }
 
-  MINMAX(move, moves, counterMoves, level) {
-    if (level === 0) return move.price;
-    let p = moves.concat([{x: move.x, y: move.y}]);
-    let fields = this.getFields(moves, counterMoves);
-
-    let bestOpponent = fields.reduce((prev, curr) => {
-      return prev.price > curr.price ? prev : curr;
-    });
-
-    if(level % 2 === 0)
-      return -move.price + this.MINMAX(bestOpponent, p, counterMoves, level - 1);
-    else
-      return move.price + this.MINMAX(bestOpponent, p, counterMoves, level - 1);
-  }
-
   updateGameState(x, y) {
-    let gameState = this.state.gameState;
+    let opponentMoves = this.state.Omoves;
+    let playerMoves = this.state.Xmoves;
 
-    let possibleMove = {x, y};
-    if(!this.arrayHas(this.Omoves, possibleMove) &&
-        !this.arrayHas(this.Xmoves, possibleMove)) {
-      this.Xmoves.push(possibleMove);
-      gameState[x][y] = this.state.currentPlayer;
+    //check if it is even right move right now
+    const possibleMove = {x, y};
+    if(!this.arrayHas(opponentMoves, possibleMove) &&
+        !this.arrayHas(playerMoves, possibleMove)) {
+      playerMoves = playerMoves.concat([possibleMove]);
     }
     else return;
 
-    let bestMove = this.decisionMove(this.Omoves, this.Xmoves);
+    //get best ai move
+    let bestOpponentMove = this.aiMove(opponentMoves, playerMoves);
+    opponentMoves = opponentMoves.concat([bestOpponentMove]);
 
-    gameState[bestMove.x][bestMove.y] = !this.state.currentPlayer;
-    this.Omoves.push(bestMove);
-
-    let XwinnerScore = this.checkForWinner(this.Xmoves);
-    let OwinnerScore = this.checkForWinner(this.Omoves);
+    //check for winner and update if necessary
+    let XwinnerScore = this.checkForWinner(playerMoves);
+    let OwinnerScore = this.checkForWinner(opponentMoves);
 
     if(XwinnerScore) {
       this.setState({
@@ -204,20 +201,40 @@ class App extends Component {
       });
     }
 
-    this.setState((prevState, props) => ({
-        gameState: gameState
-      })
-    );
+    //rerender
+    this.setState({
+      Omoves: opponentMoves,
+      Xmoves: playerMoves
+    });
+  }
+
+  restart() {
+    this.setState({
+      Xmoves: [],
+      Omoves: [],
+      winnerScore: undefined
+    });
+  }
+
+  AiStarts() {
+    if(this.state.Xmoves.length === 0 && this.state.Omoves.length === 0) {
+      this.setState({
+        Omoves: [{x: 10, y: 10}]
+      });
+    }
   }
 
   render() {
     return (
       <div className="App">
         <h1>Tic Tac Toe</h1>
-        <Canvas Xmoves={this.Xmoves}
-                Omoves={this.Omoves}
-                onGameStateChange={this.updateGameState}
+        <Menu onAiStarts={this.AiStarts}
+              onRestart={this.restart}
+        />
+        <Canvas Omoves={this.state.Omoves}
+                Xmoves={this.state.Xmoves}
                 winnerScore={this.state.winnerScore}
+                onGameStateChange={this.updateGameState}
         />
       </div>
     );

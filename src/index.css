@@ -2,4 +2,33 @@ body {
   margin: 0;
   padding: 0;
   font-family: sans-serif;
+  text-align: center;
+  font-family: 'Roboto Mono', monospace;
+  background: linear-gradient(to bottom right, #fed100, #ebedee) fixed;
+}
+
+button {
+  border: 5px solid black;
+  padding: 15px 25px;
+  width: 150px;
+  margin: 0 50px;
+  font-size: 18px;
+}
+
+button:hover {
+  background: grey;
+  transition: 300ms ease-in-out all;
+  cursor: pointer;
+}
+
+.canvasBox {
+  overflow: auto;
+  height: 68vh;
+  max-width: 800px;
+  margin: 0 auto;
+  border: 5px black solid;
+}
+.menuBox {
+  margin: 25px;
+  font-size: 20px;
 }
